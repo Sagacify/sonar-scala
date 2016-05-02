@@ -55,7 +55,7 @@ object Measures {
       case token :: tail if token.tokenType == WS => count_ncloc(tail, i)
       case token :: tail if token.tokenType == EOF => i
       case token :: tail =>
-        if( !token.tokenType.isNewline & !token.tokenType.isComment) {
+        if (!token.tokenType.isNewline & !token.tokenType.isComment) {
           count_ncloc(get_next_line(tail), i + 1)
         } else {
           count_ncloc(tail, i)

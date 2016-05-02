@@ -1,6 +1,6 @@
 package com.sagacify.sonar.scala
 
-import scala.collection.JavaConversions._
+import collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 import com.buransky.plugins.scoverage.measure.ScalaMetrics
@@ -16,10 +16,13 @@ import org.sonar.api.SonarPlugin
 import scalariform.lexer.ScalaLexer
 import scalariform.lexer.Token
 
+
 /**
  * Defines Scala as a language for SonarQube.
  */
-class Scala(s: Settings) extends AbstractLanguage("scala", "Scala") {
+class Scala(val settings: Settings) extends AbstractLanguage("scala", "Scala") {
+
+  import Scala._
 
   override def getFileSuffixes: Array[String] = Array("scala")
 
@@ -29,7 +32,6 @@ object Scala {
 
   def tokenize(sourceCode: String, scalaVersion: String): List[Token] =
     ScalaLexer.createRawLexer(sourceCode, false, scalaVersion).toList
-
 }
 
 /**
@@ -37,8 +39,8 @@ object Scala {
  */
 class ScalaPlugin extends SonarPlugin {
 
-  override def getExtensions: java.util.List[Class[_]] =
-    ListBuffer[Class[_]] (
+  override def getExtensions: java.util.List[_] =
+     (List(
       classOf[Scala],
       classOf[ScalaSensor],
       classOf[ScalastyleRepository],
@@ -47,7 +49,7 @@ class ScalaPlugin extends SonarPlugin {
       classOf[ScalaMetrics],
       classOf[ScoverageSensor],
       classOf[ScoverageWidget]
-    )
+    ) ++ ScalaProperties.definitions).asJava
 
   override val toString = getClass.getSimpleName
 

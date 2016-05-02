@@ -3,6 +3,7 @@ package com.sagacify.sonar.scala
 import scala.io.Source
 import scala.collection.JavaConversions._
 
+import org.slf4j.LoggerFactory
 import org.sonar.api.batch.fs.FileSystem
 import org.sonar.api.batch.Sensor
 import org.sonar.api.batch.SensorContext
@@ -12,6 +13,8 @@ import org.sonar.api.resources.Project
 
 class ScalaSensor(scala: Scala, fs: FileSystem) extends Sensor {
 
+  private val log = LoggerFactory.getLogger(classOf[ScalaSensor])
+
   def shouldExecuteOnProject(project: Project): Boolean = {
     return fs.hasFiles(fs.predicates().hasLanguage(scala.getKey()));
   }
@@ -19,8 +22,9 @@ class ScalaSensor(scala: Scala, fs: FileSystem) extends Sensor {
   def analyse(project: Project, context: SensorContext): Unit = {
 
     val charset = fs.encoding().toString()
-    val version = "2.11.8"
+    val version = scala.settings.getString(ScalaProperties.SCALA_VERSION)
 
+    log.info(f"Scanning for scala version: ${version}")
     val inputFiles = fs.inputFiles(fs.predicates().hasLanguage(scala.getKey()))
 
     inputFiles.foreach{ inputFile =>
