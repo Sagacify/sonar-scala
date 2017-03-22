@@ -85,7 +85,6 @@ class BruteForceSequenceMatcher(baseDir: File, sourcePath: String) extends PathS
 
   private[pathcleaner] def initSourceDir(): Seq[File] = {
     sourcePath.split(",").map { first =>
-      println(first)
       val sourceDir = new File(baseDir, first)
       require(sourceDir.isAbsolute)
       require(sourceDir.isDirectory)
@@ -93,13 +92,13 @@ class BruteForceSequenceMatcher(baseDir: File, sourcePath: String) extends PathS
     }
   }
 
-  private[pathcleaner] def initFilesMap(): Seq[(Int, Map[String, Seq[PathSeq]])] = {
+  private[pathcleaner] def initFilesMap(): List[(Int, Map[String, Seq[PathSeq]])] = {
     sourceDirs.map { sourceDir =>
       val srcFiles = FileUtils.iterateFiles(sourceDir, extensions, true)
       val paths = srcFiles.map(file => PathUtil.splitPath(file.getAbsolutePath)).toSeq
       // group them by filename, in case multiple files have the same name
       (PathUtil.splitPath(sourceDir.getAbsolutePath).size, paths.groupBy(path => path.last))
-    }
+    }.toList
   }
 
 }
