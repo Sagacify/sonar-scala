@@ -114,6 +114,6 @@ class BruteForceSequenceMatcherSpec extends FlatSpec with Matchers with MockitoS
     }
 
     override private[pathcleaner] def initSourceDir(): Seq[File] = List(srcDir)
-    override private[pathcleaner] def initFilesMap(): Seq[(Int, Map[String, Seq[PathSeq]])] = List((PathUtil.splitPath(srcDir.getAbsolutePath).size, filesMap))
+    override private[pathcleaner] def initFilesMap(): List[(Int, Map[String, Seq[PathSeq]])] = List((PathUtil.splitPath(srcDir.getAbsolutePath).size, filesMap))
   }
 }
