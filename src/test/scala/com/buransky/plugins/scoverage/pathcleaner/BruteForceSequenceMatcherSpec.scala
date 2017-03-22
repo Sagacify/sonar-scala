@@ -26,6 +26,8 @@ import org.scalatest.FlatSpec
 import com.buransky.plugins.scoverage.pathcleaner.BruteForceSequenceMatcher.PathSeq
 import org.scalatest.Matchers
 import java.io.File
+
+import com.buransky.plugins.scoverage.util.PathUtil
 import org.mockito.Mockito._
 
 @RunWith(classOf[JUnitRunner])
@@ -111,7 +113,7 @@ class BruteForceSequenceMatcherSpec extends FlatSpec with Matchers with MockitoS
       dir
     }
 
-    override private[pathcleaner] def initSourceDir(): File = srcDir
-    override private[pathcleaner] def initFilesMap(): Map[String, Seq[PathSeq]] = filesMap
+    override private[pathcleaner] def initSourceDir(): Seq[File] = List(srcDir)
+    override private[pathcleaner] def initFilesMap(): List[(Int, Map[String, Seq[PathSeq]])] = List((PathUtil.splitPath(srcDir.getAbsolutePath).size, filesMap))
   }
 }
