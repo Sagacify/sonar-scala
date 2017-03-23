@@ -20,11 +20,15 @@
 package com.buransky.plugins.scoverage.pathcleaner
 
 import java.io.File
+
 import org.apache.commons.io.FileUtils
 import BruteForceSequenceMatcher._
 import com.buransky.plugins.scoverage.util.PathUtil
+
 import scala.collection.JavaConversions._
 import org.sonar.api.utils.log.Loggers
+
+import scala.annotation.tailrec
 
 object BruteForceSequenceMatcher {
 
@@ -48,40 +52,53 @@ object BruteForceSequenceMatcher {
   */
 class BruteForceSequenceMatcher(baseDir: File, sourcePath: String) extends PathSanitizer {
 
-  private val sourceDir = initSourceDir()
-  require(sourceDir.isAbsolute)
-  require(sourceDir.isDirectory)
+  private val sourceDirs = initSourceDir()
 
   private val log = Loggers.get(classOf[BruteForceSequenceMatcher])
-  private val sourcePathLength = PathUtil.splitPath(sourceDir.getAbsolutePath).size
+  //private val sourcePathLength =
   private val filesMap = initFilesMap()
 
 
   def getSourceRelativePath(reportPath: PathSeq): Option[PathSeq] = {
-    // match with file system map of files
-    val relPathOption = for {
-      absPathCandidates <- filesMap.get(reportPath.last)
-      path <- absPathCandidates.find(absPath => absPath.endsWith(reportPath))
-    } yield path.drop(sourcePathLength)
+    getSourceRelativePathInner(filesMap, reportPath)
+  }
 
-    relPathOption
+  @tailrec
+  final def getSourceRelativePathInner(elements:Seq[(Int, Map[String, Seq[PathSeq]])], reportPath: PathSeq): Option[PathSeq]= {
+    elements match {
+      case Nil => None
+      case (sourcePathLength, head) :: rest =>
+        val relPathOption = for {
+          absPathCandidates <- head.get(reportPath.last)
+          path <- absPathCandidates.find(absPath => absPath.endsWith(reportPath))
+        } yield {
+          path.drop(sourcePathLength)
+        }
+        relPathOption match {
+          case None => getSourceRelativePathInner(rest, reportPath)
+          case v => v
+        }
+    }
   }
 
   // mock able helpers that allow us to remove the dependency to the real file system during tests
 
-  private[pathcleaner] def initSourceDir(): File = {
-    sourcePath.split(",").headOption.map { first =>
+  private[pathcleaner] def initSourceDir(): Seq[File] = {
+    sourcePath.split(",").map { first =>
       val sourceDir = new File(baseDir, first)
+      require(sourceDir.isAbsolute)
+      require(sourceDir.isDirectory)
       sourceDir
-    }.getOrElse(null)
+    }
   }
 
-  private[pathcleaner] def initFilesMap(): Map[String, Seq[PathSeq]] = {
-    val srcFiles = FileUtils.iterateFiles(sourceDir, extensions, true)
-    val paths = srcFiles.map(file => PathUtil.splitPath(file.getAbsolutePath)).toSeq
-
-    // group them by filename, in case multiple files have the same name
-    paths.groupBy(path => path.last)
+  private[pathcleaner] def initFilesMap(): List[(Int, Map[String, Seq[PathSeq]])] = {
+    sourceDirs.map { sourceDir =>
+      val srcFiles = FileUtils.iterateFiles(sourceDir, extensions, true)
+      val paths = srcFiles.map(file => PathUtil.splitPath(file.getAbsolutePath)).toSeq
+      // group them by filename, in case multiple files have the same name
+      (PathUtil.splitPath(sourceDir.getAbsolutePath).size, paths.groupBy(path => path.last))
+    }.toList
   }
 
 }
