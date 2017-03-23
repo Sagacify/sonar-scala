@@ -19,6 +19,8 @@
  */
 package com.buransky.plugins.scoverage.sensor
 
+import java.io.File
+
 import com.buransky.plugins.scoverage.language.Scala
 import com.buransky.plugins.scoverage.measure.ScalaMetrics
 import com.buransky.plugins.scoverage.pathcleaner.{BruteForceSequenceMatcher, PathSanitizer}
@@ -248,12 +250,27 @@ class ScoverageSensor(settings: Settings, pathResolver: PathResolver, fileSystem
     new Measure(ScalaMetrics.coveredStatements, coveredStatements.toDouble, 0)
 
   private def appendFilePath(src: String, name: String) = {
-    val result = src match {
+    def whyDoWeMakeThisAssumption(elems:List[String]):Option[String] = {
+      elems match {
+        case Nil => None
+        case elem :: rest =>
+          val f = new File(elem)
+          val n = new File(f, name)
+          n.exists match {
+            case true => Some(elem + java.io.File.separator + name)
+            case false => whyDoWeMakeThisAssumption(rest)
+          }
+      }
+    }
+    src match {
       case java.io.File.separator => java.io.File.separator
       case empty if empty.isEmpty => ""
-      case other => other + java.io.File.separator
+      case other =>
+        val omg = src.split(",").toList
+        whyDoWeMakeThisAssumption(omg) match {
+          case None => other + java.io.File.separator + name
+          case Some(real) => real
+        }
     }
-
-    result + name
   }
 }

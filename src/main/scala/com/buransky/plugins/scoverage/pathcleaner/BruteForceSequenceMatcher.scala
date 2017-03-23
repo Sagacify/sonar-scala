@@ -68,8 +68,6 @@ class BruteForceSequenceMatcher(baseDir: File, sourcePath: String) extends PathS
     elements match {
       case Nil => None
       case (sourcePathLength, head) :: rest =>
-        println(head)
-        println(rest)
         val relPathOption = for {
           absPathCandidates <- head.get(reportPath.last)
           path <- absPathCandidates.find(absPath => absPath.endsWith(reportPath))
