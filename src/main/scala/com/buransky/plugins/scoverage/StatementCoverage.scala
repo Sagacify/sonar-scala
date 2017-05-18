@@ -108,12 +108,12 @@ case class StatementPosition(line: Int, pos: Int)
  * @param hitCount How many times has the statement been hit by unit tests. Zero means
  *                 that the statement is not covered.
  */
-case class CoveredStatement(start: StatementPosition, end: StatementPosition, hitCount: Int)
+case class CoveredStatement(start: StatementPosition, end: StatementPosition, hitCount: Int, branch: Boolean)
 
 /**
  * Aggregated statement coverage for a given source code line.
  */
-case class CoveredLine(line: Int, hitCount: Int)
+case class CoveredLine(line: Int, hitCount: Int, conditions: Int, coveredConditions: Int)
 
 object StatementCoverage {
   /**
@@ -131,15 +131,16 @@ object StatementCoverage {
     val multilineStatements = statements.filter { s => s.start.line != s.end.line }
     val extraStatements = multilineStatements.flatMap { s =>
       for (i <- (s.start.line + 1) to s.end.line)
-        yield CoveredStatement(StatementPosition(i, 0), StatementPosition(i, 0), s.hitCount)
+        yield CoveredStatement(StatementPosition(i, 0), StatementPosition(i, 0), s.hitCount, s.branch)
     }
 
     // Group statements by starting line
     val lineStatements = (statements ++ extraStatements).groupBy(_.start.line)
 
     // Pessimistic approach: line hit count is a minimum of hit counts of all statements on the line
-    lineStatements.map { lineStatement =>
-      CoveredLine(lineStatement._1, lineStatement._2.map(_.hitCount).min)
-    }
+    lineStatements.map { case (line, lineStatement) =>
+      val coveredBranches = lineStatement.count(s => s.branch && s.hitCount > 0)
+      CoveredLine(line, lineStatement.map(_.hitCount).min, lineStatement.count(_.branch), coveredBranches)
+    }  
   }
 }
