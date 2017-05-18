@@ -37,7 +37,6 @@ Instead, we are using the [scala-ide/scalariform](https://github.com/scala-ide/s
 * Add property to sepcify scala version (currently defaults to 2.11.8)
 * Add Complexity metric on file (use the one in scalastyle)
 * remove dependency on commons-io (Currently only needed by BruteForceSequenceMatcher)
-* Uncomment ScoverageSensorSpec
 * Integrate other java compatible code quality tools
 * Optimize sensors i.e. (scalastyle and base both read and parse source files.)
 ...
