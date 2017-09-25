@@ -4,7 +4,7 @@ Sonarqube plugin for scala analysis
 # Set-up
 Intended for sonarqube 5.4
 
-Download the latest relase into your sonar extentions/downloads folder.
+Download the latest relase into your sonar extensions/downloads folder.
 Restart sonarqube either using the update center or manually.
 
 The rules in scalastyle are almost all deactivated. They must be activated and either make scala rules inherit scalastyle rules or change the project's rules.
