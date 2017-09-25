@@ -46,6 +46,7 @@ class XmlScoverageReportConstructingParser(source: Source, pathSanitizer: PathSa
   private val START_ATTRIBUTE = "start"
   private val LINE_ATTRIBUTE = "line"
   private val INVOCATION_COUNT_ATTRIBUTE = "invocation-count"
+  private val BRANCH_ATTRIBUTE = "branch"
 
   val statementsInFile: mutable.HashMap[String, List[CoveredStatement]] = mutable.HashMap.empty
   var currentFilePath: Option[String] = None
@@ -73,10 +74,11 @@ class XmlScoverageReportConstructingParser(source: Source, pathSanitizer: PathSa
             val start = getInt(attrs, START_ATTRIBUTE)
             val line = getInt(attrs, LINE_ATTRIBUTE)
             val hits = getInt(attrs, INVOCATION_COUNT_ATTRIBUTE)
+            val branch = getBoolean(attrs, BRANCH_ATTRIBUTE)
 
             // Add covered statement to the mutable map
             val pos = StatementPosition(line, start)
-            addCoveredStatement(cfp, CoveredStatement(pos, pos, hits))
+            addCoveredStatement(cfp, CoveredStatement(pos, pos, hits, branch))
 
             log.debug("Statement added: " + line + ", " + hits + ", " + start)
 
@@ -107,8 +109,10 @@ class XmlScoverageReportConstructingParser(source: Source, pathSanitizer: PathSa
       filePath
   }
 
-  private def getInt(attrs: MetaData, name: String) = getText(attrs, name).toInt
+  private def getBoolean(attrs: MetaData, name: String) = getText(attrs, name).toBoolean
 
+  private def getInt(attrs: MetaData, name: String) = getText(attrs, name).toInt
+  
   private def getText(attrs: MetaData, name: String): String = {
     attrs.get(name) match {
       case Some(attr) =>

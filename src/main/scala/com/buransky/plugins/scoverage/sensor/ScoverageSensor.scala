@@ -27,11 +27,13 @@ import com.buransky.plugins.scoverage.pathcleaner.{BruteForceSequenceMatcher, Pa
 import com.buransky.plugins.scoverage.util.LogUtil
 import com.buransky.plugins.scoverage.xml.XmlScoverageReportParser
 import com.buransky.plugins.scoverage.{CoveredStatement, DirectoryStatementCoverage, FileStatementCoverage, _}
-import org.sonar.api.batch.fs.{FileSystem, InputFile, InputPath}
+import org.sonar.api.batch.fs.internal.DefaultInputModule
+import org.sonar.api.batch.fs.{FileSystem, InputComponent, InputFile, InputPath}
+import org.sonar.api.batch.sensor.coverage.CoverageType
 import org.sonar.api.batch.{CoverageExtension, Sensor, SensorContext}
 import org.sonar.api.config.Settings
-import org.sonar.api.measures.{CoverageMeasuresBuilder, Measure}
-import org.sonar.api.resources.{Project, Resource}
+import org.sonar.api.measures.Measure
+import org.sonar.api.resources.Project
 import org.sonar.api.scan.filesystem.PathResolver
 import org.sonar.api.utils.log.Loggers
 
@@ -142,7 +144,7 @@ class ScoverageSensor(settings: Settings, pathResolver: PathResolver, fileSystem
 
   private def processProject(projectCoverage: ProjectStatementCoverage, project: Project, context: SensorContext, sonarSources: String) {
     // Save measures
-    saveMeasures(context, project, projectCoverage)
+    saveMeasures(context, new DefaultInputModule(project.getKey), projectCoverage)
 
     log.info(LogUtil.f("Statement coverage for " + project.getKey + " is " + ("%1.2f" format projectCoverage.rate)))
 
@@ -171,7 +173,7 @@ class ScoverageSensor(settings: Settings, pathResolver: PathResolver, fileSystem
     val path = appendFilePath(directory, fileCoverage.name)
 
     getResource(path, context, true) match {
-      case Some(scalaSourceFile) => {
+      case Some(scalaSourceFile: InputFile) => {
         // Save measures
         saveMeasures(context, scalaSourceFile, fileCoverage)
         // Save line coverage. This is needed just for source code highlighting.
@@ -181,9 +183,8 @@ class ScoverageSensor(settings: Settings, pathResolver: PathResolver, fileSystem
     }
   }
 
-  private def getResource(path: String, context: SensorContext, isFile: Boolean): Option[Resource] = {
-    
-    val inputOption: Option[InputPath] = if (isFile) {
+  private def getResource(path: String, context: SensorContext, isFile: Boolean): Option[InputPath] = {
+    if (isFile) {
       val p = fileSystem.predicates()
       val pathPredicate = if (new File(path).isAbsolute) p.hasAbsolutePath(path) else p.hasRelativePath(path)
       Option(fileSystem.inputFile(p.and(
@@ -193,39 +194,31 @@ class ScoverageSensor(settings: Settings, pathResolver: PathResolver, fileSystem
     } else {
       Option(fileSystem.inputDir(pathResolver.relativeFile(fileSystem.baseDir(), path)))
     }
-  
-    inputOption match {
-      case Some(path: InputPath) =>
-        Some(context.getResource(path))
-      case None => {
-        log.warn(s"File or directory not found in file system! ${path}")
-        None
-      }
-    }
   }
 
-  private def saveMeasures(context: SensorContext, resource: Resource, statementCoverage: StatementCoverage) {
-    context.saveMeasure(resource, createStatementCoverage(statementCoverage.rate))
-    context.saveMeasure(resource, createStatementCount(statementCoverage.statementCount))
-    context.saveMeasure(resource, createCoveredStatementCount(statementCoverage.coveredStatementsCount))
+  private def saveMeasures(context: SensorContext, inputComponent: InputComponent, statementCoverage: StatementCoverage) {
+    context.newMeasure().on(inputComponent).forMetric(ScalaMetrics.statementCoverage).withValue(statementCoverage.rate).save()
+    context.newMeasure().on(inputComponent).forMetric(ScalaMetrics.totalStatements).withValue(statementCoverage.statementCount).save()
+    context.newMeasure().on(inputComponent).forMetric(ScalaMetrics.coveredStatements).withValue(statementCoverage.coveredStatementsCount).save()
 
     log.debug(LogUtil.f("Save measures [" + statementCoverage.rate + ", " + statementCoverage.statementCount +
-      ", " + statementCoverage.coveredStatementsCount + ", " + resource.getKey + "]"))
+      ", " + statementCoverage.coveredStatementsCount + ", " + inputComponent.key() + "]"))
   }
 
-  private def saveLineCoverage(coveredStatements: Iterable[CoveredStatement], resource: Resource,
+  private def saveLineCoverage(coveredStatements: Iterable[CoveredStatement], inputFile: InputFile,
                                context: SensorContext) {
     // Convert statements to lines
     val coveredLines = StatementCoverage.statementCoverageToLineCoverage(coveredStatements)
 
     // Set line hits
-    val coverage = CoverageMeasuresBuilder.create()
-      coveredLines.foreach { coveredLine =>
-      coverage.setHits(coveredLine.line, coveredLine.hitCount)
+    val coverage = context.newCoverage().onFile(inputFile)
+    coveredLines.foreach { coveredLine =>
+      coverage.lineHits(coveredLine.line, coveredLine.hitCount)
+      coverage.conditions(coveredLine.line, coveredLine.conditions, coveredLine.coveredConditions)
     }
 
     // Save measures
-    coverage.createMeasures().toList.foreach(context.saveMeasure(resource, _))
+    coverage.ofType(CoverageType.OVERALL).save()
   }
 
   private def processChildren(children: Iterable[StatementCoverage], context: SensorContext, directory: String) {
@@ -243,12 +236,6 @@ class ScoverageSensor(settings: Settings, pathResolver: PathResolver, fileSystem
 
   private def createStatementCoverage[T <: Serializable](rate: Double): Measure[T] =
     new Measure[T](ScalaMetrics.statementCoverage, rate)
-
-  private def createStatementCount[T <: Serializable](statements: Int): Measure[T] =
-    new Measure(ScalaMetrics.totalStatements, statements.toDouble, 0)
-
-  private def createCoveredStatementCount[T <: Serializable](coveredStatements: Int): Measure[T] =
-    new Measure(ScalaMetrics.coveredStatements, coveredStatements.toDouble, 0)
 
   private def appendFilePath(src: String, name: String) = {
     val result = src match {
