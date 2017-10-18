@@ -10,7 +10,7 @@
 
   <artifactId>sonar-scala-plugin</artifactId>
   <packaging>sonar-plugin</packaging>
-  <version>0.0.3-SNAPSHOT</version>
+  <version>0.0.4-SNAPSHOT</version>
 
   <name>Sonar Scala Plugin</name>
   <description>Enables analysis of Scala projects into Sonar.</description>
@@ -51,7 +51,7 @@
   </issueManagement>
 
   <properties>
-    <sonar.version>5.4</sonar.version>
+    <sonar.version>5.6</sonar.version>
     <sonar.pluginKey>scala</sonar.pluginKey>
     <sonar.pluginName>Scala</sonar.pluginName>
     <sonar.pluginClass>com.sagacify.sonar.scala.ScalaPlugin</sonar.pluginClass>
